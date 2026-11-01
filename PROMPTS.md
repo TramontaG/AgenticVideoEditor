@@ -125,3 +125,16 @@ No projeto [projeto], autorizo a seleção e inclusão de assets do Pexels sobre
 [temas permitidos], com no máximo [quantidade] assets. Registre a origem e
 essa autorização. Para outros temas ou projetos, consulte-me novamente.
 ```
+
+## Usar uma página como asset do vídeo
+
+```text
+Use $video-edit e capture_page.py para capturar esta página: [URL].
+Quero mostrar [a página inteira, o título ou um elemento específico] no
+projeto [projeto]. Escolha um tamanho que mantenha o texto legível, aguarde
+o conteúdo carregar e confira a imagem antes de usá-la.
+
+Salve a captura como asset separado com a URL e as configurações de origem.
+Integre-a à timeline em [trecho ou contexto], com crop, zoom ou movimento
+conforme a edição pedir. Se a página exigir login, me informe.
+```

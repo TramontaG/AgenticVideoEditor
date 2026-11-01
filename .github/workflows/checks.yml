@@ -38,6 +38,8 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: python3 -m unittest discover -s tests -p test_video_processing.py -v
       - run: node --test tests/animation-output.test.mjs
+      - run: node --test tests/page-capture.test.mjs
       - run: npx --prefix skills/video-edit/assets/toolchain tsc --project skills/video-edit/assets/toolchain/tsconfig.json
       - run: node --check skills/video-edit/assets/toolchain/render.mjs
       - run: node --check skills/video-edit/assets/toolchain/motion-render.mjs
+      - run: node --check skills/video-edit/assets/toolchain/capture-page.mjs

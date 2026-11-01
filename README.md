@@ -51,6 +51,7 @@ To update bundled tools in an existing runtime, add `--update-toolchain` to the 
 - Transcribe locally with segment and word timestamps, JSON, and SRT output.
 - Remove image backgrounds and provide a frame-by-frame video cutout workflow.
 - Normalize media, plan edits, or export a video with long silences removed while keeping audio/video synchronized.
+- Capture web pages, full articles or individual elements as reusable image assets with source metadata.
 - Create animation assets with Motion Canvas and assemble the complete timeline in Remotion.
 - Export landscape or portrait video in HD, FHD, and QHD.
 - Store animations as transparent VP9 WebM files by default, streaming frames directly to FFmpeg without writing PNG sequences to disk. PNG output remains optional.
@@ -78,6 +79,15 @@ python3 skills/video-edit/scripts/remove_video_silence.py input.mp4 edited.mp4 -
 ```
 
 Background removal preserves real transparency and the primary audio stream, without saving per-frame images. Silence removal produces an edited video and a JSON timing map for subtitles. Both preserve the original and refuse to overwrite existing outputs. For a combined workflow, remove silence before running model inference. See the [command reference](skills/video-edit/references/commands.md) for settings and output formats.
+
+## Web screenshots as assets
+
+```bash
+python3 skills/video-edit/scripts/capture_page.py /path/to/project article https://example.com --full-page
+python3 skills/video-edit/scripts/capture_page.py /path/to/project card https://example.com --selector "main .card" --scale 2
+```
+
+The tool captures the viewport, the full document, or one element, and registers the PNG/JPEG/WebP in the project. Each capture retains its URL, timestamp, settings and a ready-to-use image clip descriptor. It uses a fresh anonymous browser and supports localhost for local pages. See the [command reference](skills/video-edit/references/commands.md) for loading waits, image quality and transparency options.
 
 ## Project organization
 
@@ -123,6 +133,7 @@ Run lightweight checks from the repository root:
 ```bash
 python3 -m unittest discover -s tests -v
 node --test tests/animation-output.test.mjs
+node --test tests/page-capture.test.mjs
 ```
 
 For the end-to-end check, run `setup.py smoke` after installation. It creates a fresh synthetic project, runs the local models, renders an animation, assembles a video, and saves diagnostics. It downloads no stock media and publishes nothing. Visual and audio review remain part of final delivery.

@@ -42,3 +42,19 @@ python scripts/remove_video_silence.py input.mp4 edited.mp4 --noise-db -35 --min
 Both scripts can choose an output filename when it is omitted. Background removal defaults to transparent VP9 WebM and reuses the runtime Python environment automatically; `.mov` selects ProRes 4444. It streams frames through memory, preserves the primary audio stream, and saves an `<output>.json` processing report.
 
 Silence removal exports the edited video, cutting audio and video together at frame-aligned boundaries. Its `<output>.json` includes kept source ranges and output timestamps for retiming subtitles. The default output is MP4 for opaque sources or WebM for sources with alpha; transparent inputs must use WebM or MOV. A video without audio or with no remaining audible content produces an error instead of an empty export. Adjust the silence threshold for the actual recording and review the cut points. Sources and existing outputs are never overwritten. Partial processing files are cleaned up on handled errors.
+
+## Web page screenshots as assets
+
+```
+python scripts/capture_page.py <project> article https://example.com --full-page --width 1920
+python scripts/capture_page.py <project> card https://example.com --selector "main .card" --scale 2
+python scripts/capture_page.py <project> headline https://example.com --wait-for "h1" --format webp --quality 90
+```
+
+The Python entry point selects the installed runtime; `--root` chooses another one. The backend can also be run from `tools/` as `node capture-page.mjs <project> <asset-id> <url> [options]`. Run setup with `--update-toolchain` after updating an existing skill installation. No additional screenshot dependency is needed: this uses the existing Puppeteer/Chrome and FFprobe.
+
+Captures are saved under `public/web/<asset-id>/capture.png` (or JPG/WebP), with `capture.json` containing the original/final URL, page title, timestamp, actual image dimensions, capture settings, warnings and an image clip descriptor. The asset is registered in `project.json`; the timeline is left for the agent to compose. Use a new asset ID for a revised capture; existing captures are protected.
+
+Options: `--width`, `--height`, and `--scale` configure the viewport and pixel density. `--full-page` captures the entire document; `--selector` captures the first matching visible element. These two modes are exclusive. `--wait-for` waits for an element, `--wait-ms` adds up to 10 seconds for late rendering, and `--timeout-ms` controls navigation/selector timeouts. `--scroll` preloads lazy content with up to 20 scroll steps; full-page mode also performs this bounded preload. Review warnings when the page keeps loading or reaches the scroll limit.
+
+PNG is the default; JPEG/WebP accept `--quality`. `--transparent` omits the browser's default background in PNG/WebP, but does not remove backgrounds drawn by the website itself. Captures use a fresh anonymous browser and do not reuse personal sessions or log in. HTTP(S) and localhost are supported. Login pages and challenges require user handling; the script does not bypass them. Review the actual screenshot before using it in the video.
