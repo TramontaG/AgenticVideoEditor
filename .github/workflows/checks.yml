@@ -39,6 +39,9 @@ jobs:
       - run: python3 -m unittest discover -s tests -p test_video_processing.py -v
       - run: node --test tests/animation-output.test.mjs
       - name: Test page capture
+        env:
+          # The installed Chrome has Ubuntu's AppArmor sandbox profile.
+          AI_EDITOR_BROWSER: /opt/google/chrome/chrome
         shell: python
         run: |
           import subprocess
