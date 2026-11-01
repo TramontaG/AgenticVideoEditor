@@ -61,7 +61,9 @@ class ProjectTests(unittest.TestCase):
 
     def test_explicit_root_overrides_other_configuration(self):
         with patch.dict("os.environ", {"AI_EDITOR_ROOT": str(self.root / "environment")}):
-            self.assertEqual(editor.root_path(self.root / "explicit"), self.root / "explicit")
+            self.assertEqual(
+                editor.root_path(self.root / "explicit"), (self.root / "explicit").resolve()
+            )
 
     def test_snapshot_preserves_manifest_and_reason(self):
         project = editor.init_project(self.root, "example")
