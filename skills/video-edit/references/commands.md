@@ -53,7 +53,7 @@ python scripts/capture_page.py <project> headline https://example.com --wait-for
 
 The Python entry point selects the installed runtime; `--root` chooses another one. The backend can also be run from `tools/` as `node capture-page.mjs <project> <asset-id> <url> [options]`. Run setup with `--update-toolchain` after updating an existing skill installation. No additional screenshot dependency is needed: this uses the existing Puppeteer/Chrome and FFprobe.
 
-If Linux reports `No usable sandbox`, set `AI_EDITOR_BROWSER` to a locally installed Chrome executable with working sandbox support (for example `/opt/google/chrome/chrome` on Ubuntu), or pass `--browser-executable`. Do not disable the browser sandbox or system security settings to capture web pages. See the [Chromium sandbox documentation](https://chromium.googlesource.com/chromium/src/+/main/docs/security/apparmor-userns-restrictions.md).
+If Linux reports `No usable sandbox`, set `AI_EDITOR_BROWSER` to a locally installed Chrome executable with working sandbox support (for example `/opt/google/chrome/chrome` on Ubuntu). Do not disable the browser sandbox or system security settings to capture web pages. See the [Chromium sandbox documentation](https://chromium.googlesource.com/chromium/src/+/main/docs/security/apparmor-userns-restrictions.md).
 
 Captures are saved under `public/web/<asset-id>/capture.png` (or JPG/WebP), with `capture.json` containing the original/final URL, page title, timestamp, actual image dimensions, capture settings, warnings and an image clip descriptor. The asset is registered in `project.json`; the timeline is left for the agent to compose. Use a new asset ID for a revised capture; existing captures are protected.
 
