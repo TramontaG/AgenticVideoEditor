@@ -50,7 +50,7 @@ To update bundled tools in an existing runtime, add `--update-toolchain` to the 
 - Analyze video metadata, scene boundaries, reference frames, and silence.
 - Transcribe locally with segment and word timestamps, JSON, and SRT output.
 - Remove image backgrounds and provide a frame-by-frame video cutout workflow.
-- Normalize media and plan silence edits without changing originals.
+- Normalize media, plan edits, or export a video with long silences removed while keeping audio/video synchronized.
 - Create animation assets with Motion Canvas and assemble the complete timeline in Remotion.
 - Export landscape or portrait video in HD, FHD, and QHD.
 - Store animations as transparent VP9 WebM files by default, streaming frames directly to FFmpeg without writing PNG sequences to disk. PNG output remains optional.
@@ -69,6 +69,15 @@ Remotion → complete timeline → preview / final export
 ```
 
 The templates import the libraries; they do not modify upstream projects or `node_modules`.
+
+## Dedicated processing scripts
+
+```bash
+python3 skills/video-edit/scripts/remove_video_background.py input.mp4 output.webm
+python3 skills/video-edit/scripts/remove_video_silence.py input.mp4 edited.mp4 --padding 0.15
+```
+
+Background removal preserves real transparency and the primary audio stream, without saving per-frame images. Silence removal produces an edited video and a JSON timing map for subtitles. Both preserve the original and refuse to overwrite existing outputs. For a combined workflow, remove silence before running model inference. See the [command reference](skills/video-edit/references/commands.md) for settings and output formats.
 
 ## Project organization
 

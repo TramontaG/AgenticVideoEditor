@@ -52,8 +52,9 @@ exportação final com o projeto editável.
 
 ```text
 Use $video-edit neste vídeo e na imagem de fundo anexada.
-Remova o fundo do vídeo, coloque a imagem como cenário e corte pausas longas,
-preservando uma margem natural antes e depois de cada fala.
+Use remove_video_silence.py para cortar as pausas longas, preservando uma
+margem natural antes e depois de cada fala. Depois use
+remove_video_background.py para remover o fundo e coloque a imagem como cenário.
 
 Verifique o recorte em cabelo, mãos e movimentos. Se a máscara ficar instável,
 teste um trecho representativo antes de processar o vídeo inteiro e escolha

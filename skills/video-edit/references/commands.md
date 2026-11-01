@@ -8,7 +8,7 @@ editor.py ingest <project-dir> <source-path>
 editor.py analyze <input-video> <analysis-dir> --threshold 0.3 --interval 10
 editor.py transcribe <input-media> <output-stem> --model base --language pt
 editor.py remove-bg <input-image> <output.png> --model u2netp
-editor.py remove-bg <input-video> <output.mov> --video --model u2netp --fps 30
+editor.py remove-bg <input-video> <output.webm> --video --model u2netp --fps 30
 editor.py silence-plan <analysis.json> <edit-map.json> --padding 0.15
 editor.py normalize <input-media> <output.mp4>
 editor.py check <output.mp4> <qa.json>
@@ -30,3 +30,15 @@ node render.mjs <project>
 ```
 
 The motion renderer initializes a usable scene if missing. Edit `<project>/motion/<asset-id>/scene.tsx` and its project module, rerun, and reference the resulting WebM using the `clip` object saved in `public/motion/<asset-id>/render.json`. The default is VP9 WebM with real alpha and `transparent: true`; frames stream directly into FFmpeg, so no PNG sequence is written to disk. `--crf 18` is the default quality; lower values increase quality and file size. `--crf 0` requests lossless VP9. `--format png` retains an explicit image-sequence option and returns a `frames` clip. Temporary output is removed after success or a handled failure; an existing video is replaced only after the new encode passes validation. Existing PNG assets are not deleted automatically because older timelines may still reference them. Options for orientation/resolution are explicit; do not silently mismatch the timeline. Cached identical renders are reused. Remotion preview uses half scale; final uses the exact manifest dimensions. Optional `--output <path>` changes the export destination. A timestamped name avoids overwriting prior exports.
+
+## Dedicated video processing scripts
+
+```
+python scripts/remove_video_background.py input.mp4 output.webm --model u2netp
+python scripts/remove_video_background.py input.mp4 output.webm --fps 30 --max-width 1280
+python scripts/remove_video_silence.py input.mp4 edited.mp4 --noise-db -35 --min-silence 0.5 --padding 0.15
+```
+
+Both scripts can choose an output filename when it is omitted. Background removal defaults to transparent VP9 WebM and reuses the runtime Python environment automatically; `.mov` selects ProRes 4444. It streams frames through memory, preserves the primary audio stream, and saves an `<output>.json` processing report.
+
+Silence removal exports the edited video, cutting audio and video together at frame-aligned boundaries. Its `<output>.json` includes kept source ranges and output timestamps for retiming subtitles. The default output is MP4 for opaque sources or WebM for sources with alpha; transparent inputs must use WebM or MOV. A video without audio or with no remaining audible content produces an error instead of an empty export. Adjust the silence threshold for the actual recording and review the cut points. Sources and existing outputs are never overwritten. Partial processing files are cleaned up on handled errors.

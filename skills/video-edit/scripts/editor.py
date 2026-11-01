@@ -12,7 +12,6 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
-import tempfile
 import urllib.parse
 import urllib.request
 
@@ -305,53 +304,18 @@ def transcribe(root, source, output, model, language=None):
 
 
 def remove_bg(root, source, output, model="u2netp", video=False, fps=30):
+    if video:
+        from video_processing import remove_video_background
+
+        return remove_video_background(root, source, output, model=model, fps=fps)
     model_env(root)
     from rembg import new_session, remove
     from PIL import Image
 
     session = new_session(model, providers=["CPUExecutionProvider"])
     source, output = Path(source), no_overwrite(output)
-    if not video:
-        with Image.open(source) as image:
-            remove(image, session=session).save(output, format="PNG")
-    else:
-        if output.suffix.lower() != ".mov":
-            raise ValueError("Video alpha output must be .mov (ProRes 4444)")
-        with tempfile.TemporaryDirectory(prefix="ai-video-bg-") as tmp:
-            folder = Path(tmp)
-            run(["ffmpeg", "-v", "error", "-i", source, "-vf", f"fps={fps}", folder / "%06d.png"])
-            for frame in sorted(folder.glob("*.png")):
-                with Image.open(frame) as image:
-                    cutout = remove(image, session=session)
-                cutout.save(frame)
-            run(
-                [
-                    "ffmpeg",
-                    "-v",
-                    "error",
-                    "-n",
-                    "-framerate",
-                    str(fps),
-                    "-i",
-                    folder / "%06d.png",
-                    "-i",
-                    source,
-                    "-map",
-                    "0:v:0",
-                    "-map",
-                    "1:a?",
-                    "-c:v",
-                    "prores_ks",
-                    "-profile:v",
-                    "4",
-                    "-pix_fmt",
-                    "yuva444p10le",
-                    "-c:a",
-                    "pcm_s16le",
-                    "-shortest",
-                    output,
-                ]
-            )
+    with Image.open(source) as image:
+        remove(image, session=session).save(output, format="PNG")
     return {"output": str(output), "model": model, "temporalModel": False}
 
 
