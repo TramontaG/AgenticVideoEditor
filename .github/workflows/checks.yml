@@ -38,7 +38,20 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: python3 -m unittest discover -s tests -p test_video_processing.py -v
       - run: node --test tests/animation-output.test.mjs
-      - run: node --test tests/page-capture.test.mjs
+      - name: Test page capture
+        shell: python
+        run: |
+          import subprocess
+          import sys
+          result = subprocess.run(
+              ['node', '--test', 'tests/page-capture.test.mjs'],
+              stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+          )
+          print(result.stdout)
+          if result.returncode:
+              detail = result.stdout[-30000:].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+              print('::error title=Page capture tests::' + detail)
+          sys.exit(result.returncode)
       - run: npx --prefix skills/video-edit/assets/toolchain tsc --project skills/video-edit/assets/toolchain/tsconfig.json
       - run: node --check skills/video-edit/assets/toolchain/render.mjs
       - run: node --check skills/video-edit/assets/toolchain/motion-render.mjs
