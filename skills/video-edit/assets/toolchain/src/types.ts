@@ -1,0 +1,37 @@
+export type ClipData = {
+  id: string;
+  type: "image" | "video" | "audio" | "title" | "frames";
+  from: number;
+  durationInFrames: number;
+  src?: string;
+  text?: string;
+  trimStartFrames?: number;
+  frameCount?: number;
+  framePattern?: string;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  objectFit?: "cover" | "contain" | "fill";
+  objectPosition?: string;
+  opacity?: number;
+  volume?: number;
+  zoomStart?: number;
+  zoomEnd?: number;
+  fadeInFrames?: number;
+  fadeOutFrames?: number;
+  color?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  textAlign?: "left" | "center" | "right";
+};
+export type Manifest = {
+  version: number;
+  width: number;
+  height: number;
+  fps: number;
+  durationInFrames: number;
+  background: string;
+  clips: ClipData[];
+};
+export type TimelineProps = { manifest: Manifest };

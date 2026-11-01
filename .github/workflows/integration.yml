@@ -1,0 +1,32 @@
+name: Linux integration
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install isolated toolchain and local models
+        run: python skills/video-edit/scripts/setup.py install --root "$RUNNER_TEMP/AI-Editor" --download-models
+      - name: Run end-to-end validation
+        run: python skills/video-edit/scripts/setup.py smoke --root "$RUNNER_TEMP/AI-Editor"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-reports
+          path: |
+            ${{ runner.temp }}/AI-Editor/logs/
+            ${{ runner.temp }}/AI-Editor/projects/*/exports/

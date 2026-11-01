@@ -1,0 +1,4 @@
+interface:
+  display_name: "Editor de vídeos por IA"
+  short_description: "Edite vídeos com timeline e assets reutilizáveis"
+  default_prompt: "Use $video-edit para editar minhas mídias e entregar o vídeo com um projeto que possa ser revisado depois."
