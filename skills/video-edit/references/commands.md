@@ -24,8 +24,9 @@ From the runtime `tools/` directory:
 
 ```
 node motion-render.mjs <project> <asset-id> --width 1920 --height 1080 --fps 30 --duration 2
+node motion-render.mjs <project> <asset-id> --format png
 node render.mjs <project> --preview
 node render.mjs <project>
 ```
 
-The motion renderer initializes a usable scene if missing. Edit `<project>/motion/<asset-id>/scene.tsx` and its project module, rerun, and reference the resulting PNG sequence as a `frames` clip. Options for orientation/resolution are explicit; do not silently mismatch the timeline. Cached identical renders are reused. Remotion preview uses half scale; final uses the exact manifest dimensions. Optional `--output <path>` changes the export destination. A timestamped name avoids overwriting prior exports.
+The motion renderer initializes a usable scene if missing. Edit `<project>/motion/<asset-id>/scene.tsx` and its project module, rerun, and reference the resulting WebM using the `clip` object saved in `public/motion/<asset-id>/render.json`. The default is VP9 WebM with real alpha and `transparent: true`; frames stream directly into FFmpeg, so no PNG sequence is written to disk. `--crf 18` is the default quality; lower values increase quality and file size. `--crf 0` requests lossless VP9. `--format png` retains an explicit image-sequence option and returns a `frames` clip. Temporary output is removed after success or a handled failure; an existing video is replaced only after the new encode passes validation. Existing PNG assets are not deleted automatically because older timelines may still reference them. Options for orientation/resolution are explicit; do not silently mismatch the timeline. Cached identical renders are reused. Remotion preview uses half scale; final uses the exact manifest dimensions. Optional `--output <path>` changes the export destination. A timestamped name avoids overwriting prior exports.

@@ -6,12 +6,13 @@ import { createServer } from "vite";
 import motionCanvasModule from "@motion-canvas/vite-plugin";
 import puppeteer from "puppeteer-core";
 import { ensureBrowser } from "@remotion/renderer";
+import { createAnimationOutput } from "./motion/output.mjs";
 
 const tools = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 if (!args[0] || !/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(args[1] || ""))
   throw new Error(
-    "Usage: node motion-render.mjs <project> <asset-id> [--width 1920 --height 1080 --fps 30 --duration 2]",
+    "Usage: node motion-render.mjs <project> <asset-id> [--width 1920 --height 1080 --fps 30 --duration 2 --format webm|png --crf 18]",
   );
 const project = path.resolve(args[0]),
   assetId = args[1];
@@ -24,6 +25,16 @@ const width = option("--width", 1920),
 if (![width, height, fps, duration].every((n) => Number.isFinite(n) && n > 0))
   throw new Error("Dimensions, FPS and duration must be positive");
 const frameCount = Math.round(duration * fps);
+const format = args.includes("--format")
+  ? args[args.indexOf("--format") + 1]
+  : "webm";
+const crf = option("--crf", 18);
+if (!["webm", "png"].includes(format))
+  throw new Error("Use --format webm or png");
+if (!Number.isInteger(crf) || crf < 0 || crf > 63)
+  throw new Error("CRF must be an integer from 0 to 63");
+if (frameCount < 1 || !Number.isInteger(width) || !Number.isInteger(height))
+  throw new Error("Use integer dimensions and at least one frame");
 const source = path.join(project, "motion", assetId),
   output = path.join(project, "public/motion", assetId);
 await fs.mkdir(source, { recursive: true });
@@ -58,10 +69,11 @@ async function hashDirectory(dir, hash) {
 async function getFingerprint() {
   const hash = crypto
     .createHash("sha256")
-    .update(JSON.stringify({ width, height, fps, duration }));
+    .update(JSON.stringify({ width, height, fps, duration, format, crf }));
   await hashDirectory(source, hash);
   hash.update(await fs.readFile(path.join(tools, "package-lock.json")));
   hash.update(await fs.readFile(fileURLToPath(import.meta.url)));
+  hash.update(await fs.readFile(path.join(tools, "motion/output.mjs")));
   return hash.digest("hex");
 }
 const fingerprint = await getFingerprint();
@@ -69,8 +81,21 @@ const cacheFile = path.join(output, "render.json");
 try {
   const cached = JSON.parse(await fs.readFile(cacheFile, "utf8"));
   if (cached.fingerprint === fingerprint) {
-    for (let f = 0; f < frameCount; f++)
-      await fs.access(path.join(output, String(f).padStart(6, "0") + ".png"));
+    if (format === "webm") {
+      const info = await fs.stat(path.join(project, "public", cached.src));
+      if (!info.isFile() || info.size !== cached.bytes)
+        throw new Error("Cached video is incomplete");
+    } else {
+      for (let f = 0; f < frameCount; f++)
+        await fs.access(
+          path.join(
+            project,
+            "public",
+            cached.src,
+            String(f).padStart(6, "0") + ".png",
+          ),
+        );
+    }
     console.log(JSON.stringify({ ...cached, cached: true }));
     process.exit(0);
   }
@@ -109,7 +134,17 @@ const server = await createServer({
   },
 });
 let browser;
+let animationOutput;
 try {
+  animationOutput = await createAnimationOutput({
+    directory: output,
+    width,
+    height,
+    fps,
+    frameCount,
+    format,
+    crf,
+  });
   server.middlewares.use((req, res, next) => {
     if (req.url === "/agent.html") {
       res.setHeader("Content-Type", "text/html");
@@ -133,8 +168,8 @@ try {
   page.on("pageerror", (e) => console.error("Motion Canvas:", e.message));
   await page.exposeFunction("saveFrame", async (index, data) => {
     if (index < frameCount)
-      await fs.writeFile(
-        path.join(output, String(index).padStart(6, "0") + ".png"),
+      await animationOutput.writeFrame(
+        index,
         Buffer.from(data.split(",")[1], "base64"),
       );
   });
@@ -191,8 +226,12 @@ try {
   );
   if (result.status !== 0)
     throw new Error("Motion Canvas render failed: " + JSON.stringify(result));
-  for (let frame = 0; frame < frameCount; frame++)
-    await fs.access(path.join(output, String(frame).padStart(6, "0") + ".png"));
+  const encoded = await animationOutput.finish();
+  const src = `motion/${assetId}/${encoded.file}`;
+  const clip =
+    format === "webm"
+      ? { type: "video", src, transparent: true, volume: 0 }
+      : { type: "frames", src, frameCount, framePattern: "%06d.png" };
   const record = {
     assetId,
     fingerprint: await getFingerprint(),
@@ -200,12 +239,22 @@ try {
     height,
     fps,
     frameCount,
-    src: `motion/${assetId}`,
-    framePattern: "%06d.png",
+    ...encoded,
+    src,
+    clip,
   };
-  await fs.writeFile(cacheFile, JSON.stringify(record, null, 2));
+  const temporaryMetadata = cacheFile + ".tmp";
+  await fs.writeFile(temporaryMetadata, JSON.stringify(record, null, 2));
+  await fs.rename(temporaryMetadata, cacheFile);
   console.log(JSON.stringify(record));
 } finally {
-  await browser?.close();
-  await server.close();
+  try {
+    await browser?.close();
+  } finally {
+    try {
+      await server.close();
+    } finally {
+      await animationOutput?.abort();
+    }
+  }
 }

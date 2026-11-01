@@ -228,7 +228,27 @@ def install_system():
         )
 
 
-def install(root, allow_system=False, download=False):
+def copy_templates(source, tools, update=False):
+    excluded = {"node_modules", ".venv", ".vite", ".remotion", "__pycache__", "template-backups"}
+    backup = tools / "template-backups" / dt.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+    for directory, folders, files in os.walk(source):
+        folders[:] = [name for name in folders if name not in excluded]
+        for name in files:
+            item = Path(directory) / name
+            relative = item.relative_to(source)
+            target = tools / relative
+            if target.exists():
+                if not update or target.read_bytes() == item.read_bytes():
+                    continue
+                saved = backup / relative
+                saved.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(target, saved)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(item, target)
+    return str(backup) if backup.exists() else None
+
+
+def install(root, allow_system=False, download=False, update=False):
     if not (3, 11) <= sys.version_info[:2] < (3, 14):
         raise RuntimeError("Run this installer with Python 3.11–3.13; do not replace system Python")
     if allow_system:
@@ -251,12 +271,7 @@ def install(root, allow_system=False, download=False):
     for folder in ["tools", "models", "projects", "styles", "workflows", "logs", "config"]:
         (root / folder).mkdir(parents=True, exist_ok=True)
     tools = root / "tools"
-    for item in ASSETS.rglob("*"):
-        target = tools / item.relative_to(ASSETS)
-        if item.is_dir():
-            target.mkdir(parents=True, exist_ok=True)
-        elif not target.exists():
-            shutil.copy2(item, target)
+    backup = copy_templates(ASSETS, tools, update=update)
     (root / ".gitignore").write_text(
         "config/\nmodels/\ntools/node_modules/\ntools/.venv/\nlogs/\n**/exports/\n",
         encoding="utf-8",
@@ -299,6 +314,8 @@ def install(root, allow_system=False, download=False):
         execute([venv, __file__, "models", "--root", root])
     report = doctor(root)
     report["validation"] = "installed_smoke_required"
+    if backup:
+        report["templateBackup"] = backup
     write(root / "logs/environment.json", report)
     return report
 
@@ -438,9 +455,7 @@ def smoke(root):
             },
             {
                 "id": "motion",
-                "type": "frames",
-                "src": animation["src"],
-                "frameCount": 60,
+                **animation["clip"],
                 "from": 0,
                 "durationInFrames": 60,
                 "objectFit": "contain",
@@ -460,6 +475,54 @@ def smoke(root):
         write(project / "timeline/manifest.json", manifest)
         output = project / "exports/integration.mp4"
         execute(["node", tools / "render.mjs", project, "--output", output], cwd=tools)
+        alpha_sample = project / "analysis/motion-alpha.png"
+        execute(
+            [
+                "ffmpeg",
+                "-v",
+                "error",
+                "-n",
+                "-c:v",
+                "libvpx-vp9",
+                "-i",
+                project / "public" / animation["src"],
+                "-vf",
+                "select=eq(n\\,30)",
+                "-frames:v",
+                "1",
+                alpha_sample,
+            ]
+        )
+        with Image.open(alpha_sample) as sample:
+            assert sample.mode == "RGBA" and sample.getpixel((0, 0))[3] == 0, (
+                "Transparent animation background missing"
+            )
+            assert sample.getextrema()[3][1] == 255, "Opaque animation content missing"
+        composition_sample = project / "analysis/composited.png"
+        execute(
+            [
+                "ffmpeg",
+                "-v",
+                "error",
+                "-n",
+                "-ss",
+                "1",
+                "-i",
+                output,
+                "-frames:v",
+                "1",
+                composition_sample,
+            ]
+        )
+        with Image.open(composition_sample) as sample:
+            red, green, blue = sample.convert("RGB").getpixel((10, 10))
+            assert red > 230 and green < 25 and blue < 25, (
+                "Video alpha did not reveal the background footage"
+            )
+        assert not list((project / "public/motion/demo").rglob("*.png")), (
+            "Default render left PNG frames on disk"
+        )
+        results["checks"]["transparentAnimation"] = True
         metadata = probe(output)
         stream = next(s for s in metadata["streams"] if s["codec_type"] == "video")
         assert (stream["width"], stream["height"]) == (1280, 720), "Unexpected output dimensions"
@@ -488,13 +551,18 @@ def main():
     parser.add_argument("--root")
     parser.add_argument("--install-system", action="store_true")
     parser.add_argument("--download-models", action="store_true")
+    parser.add_argument(
+        "--update-toolchain",
+        action="store_true",
+        help="Back up and replace bundled templates in an existing installation",
+    )
     args = parser.parse_args()
     root = root_path(args.root)
     ensure_interpreter(root, args.command, args.install_system)
     if args.command == "doctor":
         result = doctor(root)
     elif args.command == "install":
-        result = install(root, args.install_system, args.download_models)
+        result = install(root, args.install_system, args.download_models, args.update_toolchain)
     elif args.command == "models":
         result = models(root)
     else:

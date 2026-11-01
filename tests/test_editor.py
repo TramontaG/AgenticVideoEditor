@@ -11,6 +11,7 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "skills/video-edit/scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 import editor  # noqa: E402 - Import the bundled CLI without installing it globally.
+import setup  # noqa: E402 - Test the portable template updater without installing dependencies.
 
 
 class ProjectTests(unittest.TestCase):
@@ -102,6 +103,35 @@ class TimingTests(unittest.TestCase):
 
     def test_srt_timestamps_cross_hour_boundary(self):
         self.assertEqual(editor.timestamp(3661.125), "01:01:01,125")
+
+
+class TemplateUpdateTests(unittest.TestCase):
+    def test_updates_are_explicit_and_preserve_a_backup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "skill"
+            tools = Path(directory) / "tools"
+            source.mkdir()
+            tools.mkdir()
+            (source / "render.mjs").write_text("new renderer")
+            (tools / "render.mjs").write_text("custom renderer")
+            setup.copy_templates(source, tools)
+            self.assertEqual((tools / "render.mjs").read_text(), "custom renderer")
+            backup = setup.copy_templates(source, tools, update=True)
+            self.assertEqual((tools / "render.mjs").read_text(), "new renderer")
+            self.assertEqual((Path(backup) / "render.mjs").read_text(), "custom renderer")
+            self.assertIsNone(setup.copy_templates(source, tools, update=True))
+
+    def test_source_checkout_dependencies_are_not_copied_into_runtime(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "skill"
+            tools = Path(directory) / "tools"
+            (source / "node_modules/example").mkdir(parents=True)
+            (source / "node_modules/example/package.json").write_text("{}")
+            (source / "motion").mkdir()
+            (source / "motion/output.mjs").write_text("new encoder")
+            setup.copy_templates(source, tools)
+            self.assertTrue((tools / "motion/output.mjs").exists())
+            self.assertFalse((tools / "node_modules").exists())
 
 
 if __name__ == "__main__":

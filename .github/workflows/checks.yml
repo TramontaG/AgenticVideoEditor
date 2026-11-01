@@ -35,6 +35,8 @@ jobs:
           cache: npm
           cache-dependency-path: skills/video-edit/assets/toolchain/package-lock.json
       - run: npm ci --prefix skills/video-edit/assets/toolchain --no-audit --no-fund
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: node --test tests/animation-output.test.mjs
       - run: npx --prefix skills/video-edit/assets/toolchain tsc --project skills/video-edit/assets/toolchain/tsconfig.json
       - run: node --check skills/video-edit/assets/toolchain/render.mjs
       - run: node --check skills/video-edit/assets/toolchain/motion-render.mjs

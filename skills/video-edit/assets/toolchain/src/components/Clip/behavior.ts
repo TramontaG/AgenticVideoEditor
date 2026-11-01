@@ -55,6 +55,7 @@ export function useClipBehavior({ clip }: { clip: ClipData }) {
       content = React.createElement(OffthreadVideo, {
         src,
         startFrom: clip.trimStartFrames ?? 0,
+        transparent: clip.transparent ?? false,
         volume,
         style: mediaStyle,
       });

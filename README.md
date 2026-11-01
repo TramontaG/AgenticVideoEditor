@@ -43,6 +43,8 @@ Choose a runtime directory with `--root /path/to/AI-Editor` or `AI_EDITOR_ROOT`.
 
 Required runtime tools are Node.js 22+, Python 3.11–3.13, FFmpeg/FFprobe, and a compatible headless browser. The installer reuses existing prerequisites, creates an isolated Python environment, and installs Node dependencies locally. It supports apt/dnf/pacman, Homebrew, and winget. A compatible Python can be selected automatically or downloaded privately through uv when authorized. An unsupported package-manager configuration produces a diagnostic rather than silently replacing system Python.
 
+To update bundled tools in an existing runtime, add `--update-toolchain` to the install command. Differing existing files are backed up before replacement.
+
 ## What it does
 
 - Analyze video metadata, scene boundaries, reference frames, and silence.
@@ -51,6 +53,7 @@ Required runtime tools are Node.js 22+, Python 3.11–3.13, FFmpeg/FFprobe, and 
 - Normalize media and plan silence edits without changing originals.
 - Create animation assets with Motion Canvas and assemble the complete timeline in Remotion.
 - Export landscape or portrait video in HD, FHD, and QHD.
+- Store animations as transparent VP9 WebM files by default, streaming frames directly to FFmpeg without writing PNG sequences to disk. PNG output remains optional.
 - Reuse unchanged animation renders and preserve timeline snapshots.
 - Maintain separate, editable style profiles for each user or project.
 - Search and download Pexels assets with recorded user authorization.
@@ -110,6 +113,7 @@ Run lightweight checks from the repository root:
 
 ```bash
 python3 -m unittest discover -s tests -v
+node --test tests/animation-output.test.mjs
 ```
 
 For the end-to-end check, run `setup.py smoke` after installation. It creates a fresh synthetic project, runs the local models, renders an animation, assembles a video, and saves diagnostics. It downloads no stock media and publishes nothing. Visual and audio review remain part of final delivery.

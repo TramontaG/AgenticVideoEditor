@@ -6,6 +6,7 @@ export type ClipData = {
   src?: string;
   text?: string;
   trimStartFrames?: number;
+  transparent?: boolean;
   frameCount?: number;
   framePattern?: string;
   x?: number;
